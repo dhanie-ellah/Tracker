@@ -1,107 +1,170 @@
-import { StyleSheet, Text, View, Image } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  Image,
+  FlatList,
+  Dimensions,
+  View,
+  Pressable,
+} from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AppIntroSlider from "react-native-app-intro-slider";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRef, useState, useEffect } from "react";
+
+const { width, height } = Dimensions.get("window");
 
 export default function Onboarding() {
   const router = useRouter();
-  const insets = useSafeAreaInsets()
+  const flatListRef = useRef<FlatList>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const slides = [
     {
-      key: "slide1",
+      id: "1",
       title: "Smart Daily Planner",
       text: "Design your focus. Achieve your goals with intentional clarity.",
-      image:
-        "https://images.unsplash.com/photo-1662027008658-b615840c7deb?q=80&w=1162&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      image: require("../assets/images/onboardingOne.png"),
     },
     {
-      key: "slide2",
+      id: "2",
       title: "Easily Structure your day.",
       text: "Group tasks by Work, Health or Projects to keep your mind clear and your flow uninterrupted.",
-      image:
-        "https://plus.unsplash.com/premium_photo-1706191097326-cd317671d1fb?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      image: require("../assets/images/onboardingTwo.png"),
     },
     {
-      key: "slide3",
+      id: "3",
       title: "Visualize your progress.",
       text: "Track your achievements and stay motivated on your journey to success.",
-      image:
-        "https://images.unsplash.com/photo-1569230919100-d3fd5e1132f4?q=80&w=736&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      image: require("../assets/images/onboardingThree.png"),
     },
   ];
 
-  return (
-    <AppIntroSlider
-      data={slides}
-      renderItem={({ item }) => (
-        <View style={[style.container, {paddingBottom: insets.bottom}]}>
-          <Image
-            source={{ uri: item.image }}
-            resizeMode="cover"
-            style={style.image}
-          />
-          <View style={{ padding: 20, gap: 5 }}>
-            <Text style={style.headingText}>{item.title}</Text>
-            <Text style={style.paragraphText}>{item.text}</Text>
+  // Track current slide
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setCurrentIndex(viewableItems[0].index?? 0);
+    }
+  }).current;
 
-            {/* <TouchableOpacity
-              style={style.button}
-              onPress={() => router.push("/second")}
-            >
-              <Text style={style.buttonText}>Go to second</Text>
-            </TouchableOpacity> */}
-          </View>
-        </View>
-      )}
-      onDone={() => router.replace("/(tabs)/home")}
-      onSkip={() => router.replace("/(tabs)/home")}
-      dotClickEnabled={true}
-      dotStyle={{ backgroundColor: "#000" }}
-      activeDotStyle={{ backgroundColor: "#007B83" }}
-      showSkipButton={true}
-      showPrevButton={true}
-      renderNextButton={() => (
-        <Ionicons name="arrow-forward-circle" size={44} color="#007B83" />
-      )}
-      renderPrevButton={() => (
-        <Ionicons name="arrow-back-circle" size={44} color="#007B83" />
-      )}
-      renderDoneButton={() => (
-        <Ionicons name="checkmark-circle" size={44} color="#007B83" />
-      )}
-      renderSkipButton={() => (
-        <Text
-          style={{
-            color: "#007B83",
-            fontFamily: "Inter_400Regular",
-            fontSize: 16,
-            paddingTop: 10,
-          }}
-        >
-          Skip
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
+  // Skip button - go to app
+  const handleSkip = () => {
+    router.replace("/(tabs)/home");
+  };
+
+  // Next button - go to next slide or finish
+  const handleNext = () => {
+    if (currentIndex < slides.length - 1) {
+      flatListRef.current?.scrollToIndex({
+        index: currentIndex + 1,
+        animated: true,
+      });
+    } else {
+      handleSkip(); // Last slide = same as skip
+    }
+  };
+
+  // Auto scroll every 3s - stop when user touches
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const nextIndex = currentIndex === slides.length - 1? 0 : currentIndex + 1;
+      flatListRef.current?.scrollToIndex({
+        index: nextIndex,
+        animated: true,
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [currentIndex]);
+
+  const renderItem = ({ item }: any) => (
+    <View style={style.slide}>
+      <Image
+        source={item.image}
+        style={style.image}
+        resizeMode="contain"
+      />
+      <View style={style.textWrapper}>
+        <Text style={style.headingText}>{item.title}</Text>
+        <Text style={style.paragraphText}>{item.text}</Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={style.container}>
+      {/* Skip button top right */}
+      <Pressable style={style.skipBtn} onPress={handleSkip}>
+        <Text style={style.skipText}>Skip</Text>
+      </Pressable>
+
+      <FlatList
+        ref={flatListRef}
+        data={slides}
+        renderItem={renderItem}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item) => item.id}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        getItemLayout={(data, index) => ({
+          length: width,
+          offset: width * index,
+          index,
+        })}
+        onScrollBeginDrag={() => {}} // Add logic here if you want to pause auto-scroll
+      />
+
+      {/* Pagination dots */}
+      <View style={style.pagination}>
+        {slides.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              style.dot,
+              currentIndex === index && style.activeDot,
+            ]}
+          />
+        ))}
+      </View>
+
+      {/* Next / Get Started button */}
+      <Pressable style={style.button} onPress={handleNext}>
+        <Text style={style.buttonText}>
+          {currentIndex === slides.length - 1? "Get Started" : "Next"}
         </Text>
-      )}
-    />
+      </Pressable>
+    </SafeAreaView>
   );
 }
 
 const style = StyleSheet.create({
   container: {
     flex: 1,
-    gap: 2,
-    fontFamily: "Inter_400Regular",
+    backgroundColor: "#f7fafa",
+  },
+  slide: {
+    width,
+    height: height * 0.75, // Leave space for button + dots
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
   },
   image: {
     width: "100%",
-    height: 500,
-    backgroundPosition: "center",
+    height: 350,
+  },
+  textWrapper: {
+    marginTop: 20,
   },
   headingText: {
-    fontSize: 30,
-    fontFamily: "Inter_900Black",
-    letterSpacing: -0.8,
+    fontSize: 35,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -2.0,
     textAlign: "center",
     color: "#007B83",
   },
@@ -109,13 +172,42 @@ const style = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
+    marginTop: 8,
+    color: "#444",
+  },
+  skipBtn: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    zIndex: 10,
+  },
+  skipText: {
+    fontSize: 16,
+    color: "#007B83",
+    fontFamily: "Inter_400Regular",
+  },
+  pagination: {
+    flexDirection: "row",
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  dot: {
+    height: 8,
+    width: 8,
+    borderRadius: 4,
+    backgroundColor: "#CBD5E0",
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: "#007B83",
+    width: 20,
   },
   button: {
     backgroundColor: "#007B83",
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    width: "100%",
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginHorizontal: 20,
+    marginBottom: 40,
     alignItems: "center",
   },
   buttonText: {
