@@ -8,6 +8,7 @@ import {
 } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import "../global.css"
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({

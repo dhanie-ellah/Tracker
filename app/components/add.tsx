@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function Add() {
   const [visible, setVisible] = useState(false);
   return (
-    <SafeAreaView>
+    <>
       <View
         style={{
           position: "absolute",
@@ -68,6 +68,6 @@ export default function Add() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </>
   );
 }
